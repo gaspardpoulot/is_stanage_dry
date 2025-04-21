@@ -93,7 +93,7 @@ valid_loader = DataLoader(valid_data, batch_size=BATCH_SIZE)
 valid_N = len(valid_loader.dataset)
 
 input_size = n_days*96
-n_classes = 2
+n_classes = 1
 
 layers = [
     nn.Flatten(),
@@ -116,33 +116,28 @@ def train():
 
     model.train()
     for x, y in train_loader:
-        output = model(x)
+        output = model(x).flatten()
         optimizer.zero_grad()
-        batch_loss = loss_function(output, y)
+        batch_loss = loss_function(output, y.float())
         batch_loss.backward()
         optimizer.step()
 
         loss += batch_loss.item()
-        accuracy += get_batch_accuracy(output, y, train_N)
+        accuracy += binary_accuracy(output, y)/train_N*len(x)
     print('Train - Loss: {:.4f} Accuracy: {:.4f}'.format(loss, accuracy))
 
 def validate():
     loss = 0
     accuracy = 0
-
+    lentot=0
     model.eval()
     with torch.no_grad():
         for x, y in valid_loader:
-            output = model(x)
-
-            loss += loss_function(output, y).item()
-            accuracy += get_batch_accuracy(output, y, valid_N)
+            output = model(x).flatten()
+            loss += loss_function(output, y.float()).item()
+            accuracy += binary_accuracy(output, y)/valid_N*len(x)
     print('Valid - Loss: {:.4f} Accuracy: {:.4f}'.format(loss, accuracy))
 
-def get_batch_accuracy(output, y, N):
-    pred = output.argmax(dim=1, keepdim=True)
-    correct = pred.eq(y.view_as(pred)).sum().item()
-    return correct / N
 
 epochs = 10
 
